@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# `.env.example` documents the variables and holds no real values, so it is tracked.
+!.env.example
 
 # vercel
 .vercel
