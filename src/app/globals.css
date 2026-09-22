@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
+/*
+ * Chronospeed design tokens (Tailwind v4).
+ *
+ * The palette is deliberately restrained: a warm off-white / charcoal surface pair,
+ * near-black foreground, and a single muted brass accent — appropriate for a
+ * watches-only store. Values live as plain CSS custom properties so a future theme
+ * change (or a brand refresh) is one edit here rather than a sweep through
+ * components.
+ *
+ * Light is the default; dark follows the user's OS preference.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --surface: #fbfaf7;
+  --surface-muted: #f1efe9;
+  --surface-raised: #ffffff;
+  --border: #e3e0d8;
+  --foreground: #14130f;
+  --muted-foreground: #6a675f;
+  --accent: #8a6a2f;
+  --accent-foreground: #fdfcf9;
+  --ring: #8a6a2f;
+  --danger: #a4291f;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --surface: #0d0d0f;
+    --surface-muted: #16161a;
+    --surface-raised: #1b1b20;
+    --border: #2a2a31;
+    --foreground: #f4f2ec;
+    --muted-foreground: #a09d95;
+    --accent: #c9a24a;
+    --accent-foreground: #14130f;
+    --ring: #c9a24a;
+    --danger: #e79b95;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --color-danger: var(--danger);
+
+  --font-sans: var(--font-sans-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-ui), ui-monospace, monospace;
+
+  /* A tight, premium radius scale: watches are precision objects, not bubbles. */
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background-color: var(--surface);
+    color: var(--foreground);
+  }
+
+  /* One visible, consistent focus ring everywhere — no `outline: none` overrides. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
