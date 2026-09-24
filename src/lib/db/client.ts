@@ -58,6 +58,7 @@ function createClient(): DatabaseClient {
  */
 const globalScope = globalThis as typeof globalThis & {
   chronospeedDbClient?: DatabaseClient;
+  chronospeedDbOverride?: Database;
 };
 
 function getClient(): DatabaseClient {
@@ -69,6 +70,18 @@ function getClient(): DatabaseClient {
 }
 
 /**
+ * Installs a client for automated tests, so they never open the real Neon connection.
+ * Pass `undefined` to restore the default pooled client.
+ *
+ * This is the seam the PGlite harness (`src/tests/helpers/db.ts`) uses. It is the only
+ * mutation this module allows; it is not reachable from a request path, and nothing in
+ * `src/app` or `src/lib` other than the test harness calls it.
+ */
+export function setDbOverride(database: Database | undefined): void {
+  globalScope.chronospeedDbOverride = database;
+}
+
+/**
  * Relational Drizzle client.
  *
  * A proxy is used so the connection is created on first query rather than at
@@ -76,7 +89,10 @@ function getClient(): DatabaseClient {
  */
 export const db: Database = new Proxy({} as Database, {
   get(_target, property) {
-    const target = getClient().db as unknown as Record<PropertyKey, unknown>;
+    const target = (globalScope.chronospeedDbOverride ?? getClient().db) as unknown as Record<
+      PropertyKey,
+      unknown
+    >;
     const value = target[property];
 
     return typeof value === "function" ? value.bind(target) : value;

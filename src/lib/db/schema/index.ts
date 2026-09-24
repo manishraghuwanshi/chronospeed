@@ -12,3 +12,4 @@
  * itself is guarded in `../client.ts`. Do not import it from a Client Component.
  */
 export * from "./catalog";
+export * from "./customer";
