@@ -22,9 +22,6 @@ import { z } from "zod";
 
 const NODE_ENVIRONMENTS = ["development", "test", "production"] as const;
 
-/** Anything shorter than this cannot be a real secret. */
-const MIN_SECRET_LENGTH = 32;
-
 const environmentSchema = z.object({
   NODE_ENV: z
     .enum(NODE_ENVIRONMENTS, {
@@ -56,15 +53,71 @@ const environmentSchema = z.object({
     .default("http://localhost:3000"),
 
   // ---------------------------------------------------------------------------
-  // Later phases. Deliberately optional in Phase 1 so the foundation builds and
+  // Phase 2 — customer sessions (active). All have defaults, so the application
+  // still builds and runs with none of them set; each tightens a specific rule.
+  // There is deliberately **no** signing secret: the session token is opaque
+  // random material whose hash is the only thing stored, so there is no key to
+  // configure, leak or rotate.
+  // ---------------------------------------------------------------------------
+
+  /** Name of the `HttpOnly` customer session cookie. */
+  SESSION_COOKIE_NAME: z
+    .string()
+    .trim()
+    .min(1, { error: "SESSION_COOKIE_NAME: must not be empty" })
+    .max(64, { error: "SESSION_COOKIE_NAME: must not exceed 64 characters" })
+    .regex(/^[A-Za-z0-9_-]+$/, {
+      error: "SESSION_COOKIE_NAME: may only contain letters, digits, hyphen and underscore",
+    })
+    .default("cs_customer_session"),
+
+  AUTH_SESSION_TTL_DAYS: z.coerce
+    .number({ error: "AUTH_SESSION_TTL_DAYS: expected a number" })
+    .int({ error: "AUTH_SESSION_TTL_DAYS: expected an integer" })
+    .min(1, { error: "AUTH_SESSION_TTL_DAYS: expected a number >= 1" })
+    .max(365, { error: "AUTH_SESSION_TTL_DAYS: expected a number <= 365" })
+    .default(30),
+
+  /** Consecutive failed sign-ins before the account is locked. */
+  AUTH_LOGIN_MAX_ATTEMPTS: z.coerce
+    .number({ error: "AUTH_LOGIN_MAX_ATTEMPTS: expected a number" })
+    .int({ error: "AUTH_LOGIN_MAX_ATTEMPTS: expected an integer" })
+    .min(3, { error: "AUTH_LOGIN_MAX_ATTEMPTS: expected a number >= 3" })
+    .max(50, { error: "AUTH_LOGIN_MAX_ATTEMPTS: expected a number <= 50" })
+    .default(5),
+
+  /** How long the account stays locked once the threshold is reached. */
+  AUTH_LOGIN_LOCKOUT_MINUTES: z.coerce
+    .number({ error: "AUTH_LOGIN_LOCKOUT_MINUTES: expected a number" })
+    .int({ error: "AUTH_LOGIN_LOCKOUT_MINUTES: expected an integer" })
+    .min(1, { error: "AUTH_LOGIN_LOCKOUT_MINUTES: expected a number >= 1" })
+    .max(1440, { error: "AUTH_LOGIN_LOCKOUT_MINUTES: expected a number <= 1440" })
+    .default(15),
+
+  /** Least time allowed between two consecutive failed sign-ins for one account. */
+  AUTH_LOGIN_MIN_INTERVAL_SECONDS: z.coerce
+    .number({ error: "AUTH_LOGIN_MIN_INTERVAL_SECONDS: expected a number" })
+    .int({ error: "AUTH_LOGIN_MIN_INTERVAL_SECONDS: expected an integer" })
+    .min(0, { error: "AUTH_LOGIN_MIN_INTERVAL_SECONDS: expected a number >= 0" })
+    .max(300, { error: "AUTH_LOGIN_MIN_INTERVAL_SECONDS: expected a number <= 300" })
+    .default(5),
+
+  /**
+   * In-process rate limiting for the auth Server Actions. Enabled by default; turned
+   * off in automated runs, where many cases submit forms from the same in-process
+   * client and a limiter that cannot be disabled turns an unrelated suite into a
+   * flaky failure. The account-scoped throttle is never disabled.
+   */
+  AUTH_RATE_LIMIT_ENABLED: z
+    .enum(["true", "false"], { error: "AUTH_RATE_LIMIT_ENABLED: expected true or false" })
+    .default("true")
+    .transform((value) => value === "true"),
+
+  // ---------------------------------------------------------------------------
+  // Later phases. Deliberately optional in Phase 1/2 so the foundation builds and
   // runs without payment/shipping/email credentials, while still enforcing the
   // grouping rules below. Each phase tightens its own validation.
   // ---------------------------------------------------------------------------
-
-  /** Phase 4 — customer session signing material. */
-  AUTH_SECRET: z.string().min(MIN_SECRET_LENGTH).optional(),
-  /** Phase 4 — customer session cookie name. */
-  SESSION_COOKIE_NAME: z.string().min(1).optional(),
 
   /** Phase 9 — Razorpay. */
   RAZORPAY_KEY_ID: z.string().min(1).optional(),

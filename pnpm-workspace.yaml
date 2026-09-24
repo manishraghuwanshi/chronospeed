@@ -1,3 +1,8 @@
 allowBuilds:
+  # `argon2` ships native code with a prebuild; its install script verifies or
+  # compiles the binding, so it must be allowed or `pnpm install` exits non-zero.
+  argon2: true
+  # Required by vitest / drizzle-kit tooling.
+  esbuild: true
   sharp: false
   unrs-resolver: false
