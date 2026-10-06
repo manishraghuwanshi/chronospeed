@@ -16,7 +16,6 @@ import { createTestDatabase, type TestDatabase } from "./helpers/db";
  * ways that still render *something*, which is why the assertions below are about exact
  * values and exact orders rather than about non-emptiness.
  */
-
 describe("catalog DAL: product detail", () => {
   let handle: TestDatabase;
 
@@ -117,6 +116,7 @@ describe("catalog DAL: product detail", () => {
         { label: "Chronograph", value: "true" },
         { label: "Lug width", value: "20 mm" },
       ]);
+
       // `jsonb` does not preserve key order — Postgres stores its keys sorted by length
       // then bytewise — so the DAL promises a stable *shape*, not the admin's typing
       // order. Asserting an order here would be asserting a storage detail.
@@ -142,7 +142,7 @@ describe("catalog DAL: product detail", () => {
     });
   });
 
-  describe("images: keys only, primary first", () => {
+  describe("images: storage keys and signed URLs, primary first", () => {
     it("orders the gallery primary-first, then by the admin's sort order", async () => {
       const brand = await seedBrand(handle, { name: "Seiko", slug: "seiko" });
       await seedProduct(handle, {
@@ -155,7 +155,11 @@ describe("catalog DAL: product detail", () => {
           { storageKey: "products/gallery/third.jpg", sortOrder: 30 },
           { storageKey: "products/gallery/second.jpg", sortOrder: 20 },
           // Primary wins on `is_primary` regardless of its `sort_order`.
-          { storageKey: "products/gallery/primary.jpg", sortOrder: 40, isPrimary: true },
+          {
+            storageKey: "products/gallery/primary.jpg",
+            sortOrder: 40,
+            isPrimary: true,
+          },
           { storageKey: "products/gallery/first.jpg", sortOrder: 10 },
         ],
       });
@@ -171,7 +175,7 @@ describe("catalog DAL: product detail", () => {
       expect(detail!.images[0]!.isPrimary).toBe(true);
     });
 
-    it("carries storage keys as opaque values, never as URLs", async () => {
+    it("carries storage keys and exposes signed image URLs", async () => {
       const brand = await seedBrand(handle, { name: "Seiko", slug: "seiko" });
       await seedProduct(handle, {
         name: "Keys",
@@ -179,18 +183,26 @@ describe("catalog DAL: product detail", () => {
         sku: "KEY-1",
         brandId: brand.id,
         price: 9000,
-        thumbnailStorageKey: "products/keys/thumb.jpg",
-        images: [{ storageKey: "products/keys/full.jpg", altText: "Front view" }],
+        images: [
+          {
+            storageKey: "products/keys/full.jpg",
+            altText: "Front view",
+            isPrimary: true,
+          },
+        ],
       });
 
       const detail = await getProductBySlug("keys");
 
-      expect(detail!.thumbnailStorageKey).toBe("products/keys/thumb.jpg");
+      expect(detail!.thumbnailStorageKey).toBe("products/keys/full.jpg");
       expect(detail!.images[0]).toEqual({
         id: expect.any(String),
         storageKey: "products/keys/full.jpg",
         altText: "Front view",
-        isPrimary: false,
+        isPrimary: true,
+        url: expect.stringContaining(
+          "https://storage.invalid.test/chronospeed-test/products/keys/full.jpg?",
+        ),
       });
     });
   });
@@ -199,7 +211,10 @@ describe("catalog DAL: product detail", () => {
     it("prefers a category match, then falls back to the same brand", async () => {
       const seiko = await seedBrand(handle, { name: "Seiko", slug: "seiko" });
       const casio = await seedBrand(handle, { name: "Casio", slug: "casio" });
-      const diving = await seedCategory(handle, { name: "Diving", slug: "diving" });
+      const diving = await seedCategory(handle, {
+        name: "Diving",
+        slug: "diving",
+      });
       const dress = await seedCategory(handle, { name: "Dress", slug: "dress" });
 
       await seedProduct(handle, {
@@ -210,6 +225,7 @@ describe("catalog DAL: product detail", () => {
         price: 10000,
         categoryIds: [diving.id],
       });
+
       // Same brand, no shared category.
       await seedProduct(handle, {
         name: "Same brand",
@@ -219,6 +235,7 @@ describe("catalog DAL: product detail", () => {
         price: 11000,
         categoryIds: [dress.id],
       });
+
       // Different brand, shared category.
       await seedProduct(handle, {
         name: "Shares category",
@@ -228,6 +245,7 @@ describe("catalog DAL: product detail", () => {
         price: 12000,
         categoryIds: [diving.id],
       });
+
       // Neither relevant: must not appear.
       await seedProduct(handle, {
         name: "Unrelated",
@@ -258,6 +276,7 @@ describe("catalog DAL: product detail", () => {
         brandId: seiko.id,
         price: 10000,
       });
+
       await seedProduct(handle, {
         name: "Sibling",
         slug: "sibling",
@@ -265,6 +284,7 @@ describe("catalog DAL: product detail", () => {
         brandId: seiko.id,
         price: 12000,
       });
+
       await seedProduct(handle, {
         name: "Stranger",
         slug: "stranger",
@@ -281,8 +301,15 @@ describe("catalog DAL: product detail", () => {
 
     it("recommends no unpublished product and none under a deactivated brand", async () => {
       const seiko = await seedBrand(handle, { name: "Seiko", slug: "seiko" });
-      const retired = await seedBrand(handle, { name: "Retired", slug: "retired", isActive: false });
-      const diving = await seedCategory(handle, { name: "Diving", slug: "diving" });
+      const retired = await seedBrand(handle, {
+        name: "Retired",
+        slug: "retired",
+        isActive: false,
+      });
+      const diving = await seedCategory(handle, {
+        name: "Diving",
+        slug: "diving",
+      });
 
       await seedProduct(handle, {
         name: "Subject",
@@ -292,6 +319,7 @@ describe("catalog DAL: product detail", () => {
         price: 10000,
         categoryIds: [diving.id],
       });
+
       await seedProduct(handle, {
         name: "Live sibling",
         slug: "live-sibling",
@@ -300,6 +328,7 @@ describe("catalog DAL: product detail", () => {
         price: 12000,
         categoryIds: [diving.id],
       });
+
       await seedProduct(handle, {
         name: "Draft sibling",
         slug: "draft-sibling",
@@ -309,6 +338,7 @@ describe("catalog DAL: product detail", () => {
         isActive: false,
         categoryIds: [diving.id],
       });
+
       await seedProduct(handle, {
         name: "Retired sibling",
         slug: "retired-sibling",
@@ -326,7 +356,10 @@ describe("catalog DAL: product detail", () => {
 
     it("caps the number of recommendations, whatever the caller asks for", async () => {
       const brand = await seedBrand(handle, { name: "Seiko", slug: "seiko" });
-      const diving = await seedCategory(handle, { name: "Diving", slug: "diving" });
+      const diving = await seedCategory(handle, {
+        name: "Diving",
+        slug: "diving",
+      });
 
       await seedProduct(handle, {
         name: "Subject",
