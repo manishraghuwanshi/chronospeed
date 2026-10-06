@@ -28,6 +28,14 @@ export interface TestDatabase {
   readonly db: Database;
   /** Raw handle, for assertions that need to bypass the ORM. */
   readonly pglite: PgliteDatabase<typeof appSchema>;
+  /**
+   * The underlying PGlite instance.
+   *
+   * Exposed so a test can run DDL that this repository's migrations do not own — in
+   * practice the admin-owned catalogue tables (`./catalog-schema.ts`). Drizzle's
+   * `$client` exists at runtime but is not part of the typed surface.
+   */
+  readonly client: PGlite;
   close(): Promise<void>;
 }
 
@@ -45,6 +53,7 @@ export async function createTestDatabase(): Promise<TestDatabase> {
   return {
     db: asAppDb,
     pglite,
+    client,
     async close() {
       setDbOverride(undefined);
       await client.close();
