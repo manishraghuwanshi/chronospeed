@@ -7,6 +7,7 @@ import { clearSessionCookie, readSessionCookie, setSessionCookie } from "@/lib/a
 import { evaluateLoginThrottle } from "@/lib/auth/login-throttle";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { generateSessionToken, hashSessionToken } from "@/lib/auth/tokens";
+import { mergeGuestCartAfterSignIn } from "@/lib/cart/merge";
 import {
   findActiveSessionByTokenHash,
   findCustomerCredentialsByEmail,
@@ -113,6 +114,12 @@ async function startSession(
   });
 
   await setSessionCookie(rawToken, getSessionCookieMaxAgeSeconds());
+
+  // Phase 4: the visitor is now authenticated, so anything they put in a guest cart while
+  // signed out is moved into their customer cart before the redirect renders a page. This
+  // runs *after* the session cookie is set and never throws — a cart problem must not fail a
+  // sign-in (`lib/cart/merge.ts` documents the failure policy).
+  await mergeGuestCartAfterSignIn(customer.id);
 
   return {
     ...customer,

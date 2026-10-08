@@ -69,6 +69,11 @@ export async function createTestDatabase(): Promise<TestDatabase> {
  * satisfied, exactly as they would on Neon.
  */
 export async function clearTestData(handle: TestDatabase): Promise<void> {
+  // Cart rows cascade from `carts`, and `carts` cascades from `customers`, so the real
+  // foreign keys stay satisfied while deleting children before parents — exactly as they
+  // would on Neon.
+  await handle.db.delete(appSchema.cartItems);
+  await handle.db.delete(appSchema.carts);
   await handle.db.delete(appSchema.customerSessions);
   await handle.db.delete(appSchema.customers);
 }

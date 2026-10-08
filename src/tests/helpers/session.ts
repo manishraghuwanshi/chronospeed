@@ -1,7 +1,9 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 
-import { hashSessionToken } from "@/lib/auth/tokens";
+import { env } from "@/config/env";
+import { generateSessionToken, hashSessionToken } from "@/lib/auth/tokens";
 import { customerSessions, customers } from "@/lib/db/schema/customer";
+import { testCookieJar } from "@/tests/stubs/next-headers";
 
 import type { TestDatabase } from "./db";
 
@@ -65,4 +67,44 @@ export async function revokeSessionsFor(handle: TestDatabase, customerId: string
     .update(customerSessions)
     .set({ revokedAt: new Date() })
     .where(eq(customerSessions.customerId, customerId));
+}
+
+/**
+ * Issue a working session for a customer **without** going through the sign-in action.
+ *
+ * Used by the cart suites, which need an authenticated visitor to exist but are not testing
+ * authentication — driving the real sign-in would add an Argon2 hash and a throttle to every one
+ * of them for no assertion. The raw token is returned so the caller can put it in the stub
+ * cookie jar exactly as the browser would have received it.
+ */
+export async function seedSessionFor(
+  handle: TestDatabase,
+  customerId: string,
+  options: { readonly expiresAt?: Date } = {},
+): Promise<string> {
+  const rawToken = generateSessionToken();
+
+  await handle.db.insert(customerSessions).values({
+    customerId,
+    tokenHash: hashSessionToken(rawToken),
+    expiresAt: options.expiresAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000),
+  });
+
+  return rawToken;
+}
+
+/**
+ * Sign a customer in as far as the application is concerned, by seeding a session and the
+ * session cookie together.
+ */
+export async function signInAs(
+  handle: TestDatabase,
+  customerId: string,
+  options: { readonly expiresAt?: Date } = {},
+): Promise<string> {
+  const rawToken = await seedSessionFor(handle, customerId, options);
+
+  testCookieJar.seed(env.SESSION_COOKIE_NAME, rawToken);
+
+  return rawToken;
 }

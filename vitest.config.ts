@@ -34,6 +34,7 @@ export default defineConfig({
       "server-only": stub("server-only.ts"),
       "next/headers": stub("next-headers.ts"),
       "next/navigation": stub("next-navigation.ts"),
+      "next/cache": stub("next-cache.ts"),
     },
   },
 

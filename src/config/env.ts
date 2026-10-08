@@ -114,6 +114,56 @@ const environmentSchema = z.object({
     .transform((value) => value === "true"),
 
   // ---------------------------------------------------------------------------
+  // Phase 4 — cart. Same convention as the Phase 2 block above: every value has a
+  // default, so the application builds and runs with none of them set.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Name of the `HttpOnly` guest cart cookie.
+   *
+   * Distinct from `SESSION_COOKIE_NAME` on purpose. A guest cart token is not a
+   * session, and sharing one name would mean a signed-in customer's browser carried
+   * an authentication cookie that was also a cart identifier — two different
+   * lifetimes and two different trust levels in one value.
+   */
+  GUEST_CART_COOKIE_NAME: z
+    .string()
+    .trim()
+    .min(1, { error: "GUEST_CART_COOKIE_NAME: must not be empty" })
+    .max(64, { error: "GUEST_CART_COOKIE_NAME: must not exceed 64 characters" })
+    .regex(/^[A-Za-z0-9_-]+$/, {
+      error: "GUEST_CART_COOKIE_NAME: may only contain letters, digits, hyphen and underscore",
+    })
+    .default("cs_guest_cart"),
+
+  /**
+   * How long an anonymous cart survives without being touched (1-365 days, default 30).
+   *
+   * Enforced twice: the cookie expires in the browser, and `carts.expires_at` expires
+   * the row server-side, so a copied cookie value cannot revive an abandoned cart.
+   */
+  CART_GUEST_TTL_DAYS: z.coerce
+    .number({ error: "CART_GUEST_TTL_DAYS: expected a number" })
+    .int({ error: "CART_GUEST_TTL_DAYS: expected an integer" })
+    .min(1, { error: "CART_GUEST_TTL_DAYS: expected a number >= 1" })
+    .max(365, { error: "CART_GUEST_TTL_DAYS: expected a number <= 365" })
+    .default(30),
+
+  /**
+   * Most units of one product a single cart may hold (1-100, default 10).
+   *
+   * This is a sanity bound independent of stock. Availability is the tighter limit in
+   * practice, but without a ceiling a malformed request could ask for a six-figure
+   * quantity and force a large integer into every total calculation.
+   */
+  CART_MAX_LINE_QUANTITY: z.coerce
+    .number({ error: "CART_MAX_LINE_QUANTITY: expected a number" })
+    .int({ error: "CART_MAX_LINE_QUANTITY: expected an integer" })
+    .min(1, { error: "CART_MAX_LINE_QUANTITY: expected a number >= 1" })
+    .max(100, { error: "CART_MAX_LINE_QUANTITY: expected a number <= 100" })
+    .default(10),
+
+  // ---------------------------------------------------------------------------
   // Later phases. Deliberately optional in Phase 1/2 so the foundation builds and
   // runs without payment/shipping/email credentials, while still enforcing the
   // grouping rules below. Each phase tightens its own validation.
