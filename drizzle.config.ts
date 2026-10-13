@@ -29,7 +29,7 @@ export default defineConfig({
   dialect: "postgresql",
 
   // Chronospeed-owned tables only. Never add a catalog mirror here.
-  schema: ["./src/lib/db/schema/customer.ts"],
+  schema: ["./src/lib/db/schema/customer.ts", "./src/lib/db/schema/cart.ts"],
 
   out: "./drizzle",
 

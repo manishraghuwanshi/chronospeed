@@ -8,6 +8,13 @@
       "when": 1791976795119,
       "tag": "0000_unique_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792071107508,
+      "tag": "0001_colorful_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }
