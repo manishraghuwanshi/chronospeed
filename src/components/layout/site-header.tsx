@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { CartBadge } from "@/components/cart/cart-badge";
 import { Container } from "@/components/ui/container";
 import { getCurrentCustomer } from "@/lib/auth/session";
 import { SITE_NAME } from "@/lib/site";
@@ -22,8 +23,10 @@ import { customerDisplayName } from "@/lib/types/customer";
  * would only *hide* a link, never authorize anything, and the DAL is the real boundary
  * (`docs/security-plan.md` §1, `docs/architecture.md` §4.2).
  *
- * Cart, search and a mobile drawer remain absent: they belong to later phases, and
- * inert placeholders would imply functionality that does not exist.
+ * The cart badge (Phase 4) is rendered from the same dynamic read: its count comes from the
+ * server, so it cannot drift from what the bag page shows. Search and a mobile drawer remain
+ * absent — they belong to later phases, and inert placeholders would imply functionality that
+ * does not exist.
  */
 
 const NAV_LINKS = [
@@ -59,6 +62,8 @@ export async function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3 text-sm">
+          <CartBadge />
+
           {customer ? (
             <>
               <Link

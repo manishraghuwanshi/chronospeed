@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AddToCartForm } from "@/components/cart/add-to-cart-form";
 import { PlaceholderImage } from "@/components/catalog/placeholder-image";
 import { ProductCard } from "@/components/catalog/product-card";
 import { Container } from "@/components/ui/container";
@@ -149,14 +150,10 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
             </div>
           ) : null}
 
-          {/*
-            Deliberately no add-to-cart control: the cart is Phase 6 and purchasing is
-            Phase 8, and a button that did nothing would be a worse lie than its absence.
-          */}
-          <p className="rounded-sm border border-border bg-surface p-3 text-xs leading-5 text-muted-foreground">
-            Ordering opens in a later phase of this build. Everything shown here is read
-            directly from the store&apos;s live catalogue.
-          </p>
+          <AddToCartForm
+            productId={product.id}
+            availableQuantity={product.availability.availableQuantity}
+          />
         </div>
       </div>
 
